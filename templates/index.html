@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Word Fix — Sửa lỗi Word trực tuyến</title>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,sans-serif;background:#f4f6fb;color:#20283c;margin:0}.wrap{max-width:800px;margin:60px auto;padding:20px}.panel{background:white;border-radius:22px;padding:36px;box-shadow:0 12px 40px #20304a12}h1{font-size:32px;margin-top:0}p{color:#677188}.drop{display:block;border:2px dashed #aab7d4;border-radius:16px;padding:38px;text-align:center;cursor:pointer;background:#fafbff}input[type=file]{display:none}.option{display:block;margin:18px 0;cursor:pointer}button{border:0;background:#4b55d6;color:white;border-radius:12px;padding:14px 22px;cursor:pointer;font-weight:700}button:disabled{opacity:.5}#status{white-space:pre-wrap;margin-top:18px;line-height:1.7}small{color:#667}
+</style></head><body><main class="wrap"><div class="panel">
+<h1>Word Fix <span style="color:#5866dc">✦</span></h1>
+<p>Tải tài liệu Word lên để tự động chuẩn hóa dấu câu, khoảng trắng và định dạng.</p>
+<label class="drop" for="file" id="drop">📄<h3 id="filename">Chọn hoặc kéo thả file .docx vào đây</h3><small>Giới hạn 20 MB</small></label>
+<input id="file" type="file" accept=".docx">
+<label class="option"><input id="narrow" type="checkbox" checked> Lề Narrow — 1,27 cm bốn phía</label>
+<label class="option"><input id="headings" type="checkbox" checked> Tên chương, Văn án, Giới thiệu → Heading 2, Tahoma 11</label>
+<button id="go">Rà soát và tải file đã sửa</button>
+<div id="status" aria-live="polite"></div>
+<p><small>Hỗ trợ sửa khoảng trắng thừa, dấu câu và ký hiệu ^+^+ dính vào chữ. Giữ ảnh và phần lớn định dạng Word. Các đoạn có nhiều kiểu định dạng sẽ được đánh dấu cần kiểm tra để tránh hỏng bố cục.</small></p>
+</div></main>
+<script>
+const f=document.getElementById('file'),drop=document.getElementById('drop'),status=document.getElementById('status'),go=document.getElementById('go');
+f.onchange=()=>document.getElementById('filename').textContent=f.files[0]?.name||'Chọn file .docx';
+drop.ondragover=e=>e.preventDefault();
+drop.ondrop=e=>{e.preventDefault();f.files=e.dataTransfer.files;f.onchange()};
+go.onclick=async()=>{
+ if(!f.files.length){status.textContent='Bạn chưa chọn file.';return}
+ go.disabled=true;status.textContent='Đang xử lý tài liệu…';
+ const data=new FormData();data.append('file',f.files[0]);
+ data.append('narrow',document.getElementById('narrow').checked);
+ data.append('headings',document.getElementById('headings').checked);
+ try{
+  const r=await fetch('/api/clean',{method:'POST',body:data});
+  if(!r.ok){let err;try{err=await r.json()}catch{}status.textContent=err?.error||'Không xử lý được tài liệu.';return}
+  const report=JSON.parse(r.headers.get('X-Corrections')||'{}');
+  const blob=await r.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=f.files[0].name.replace(/\.docx$/i,'')+'_da_sua.docx';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),10000);
+  status.textContent='✓ Đã xử lý và tải file.\n'+Object.entries(report).map(([name,count])=>name+': '+count).join('\n');
+ }catch(e){status.textContent='Lỗi kết nối máy chủ.'}finally{go.disabled=false}
+};
+</script></body></html>
