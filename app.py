@@ -13,6 +13,56 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 950 * 1024 * 1024
 
+MASKED_WORDS = [
+    ("k** kh** q**n", "kéo khóa quần"),
+    ("c*n m** d***", "cắn môi dưới"),
+    ("k*ch th*ch", "kích thích"),
+    ("ph*ng đ*ng", "phóng đãng"),
+    ("b**n th**", "biến thái"),
+    ("th*n d***", "thân dưới"),
+    ("tr*n tr**", "trần trụi"),
+    ("kh*u gi*o", "khẩu giao"),
+    ("kh*** c*m", "khoái cảm"),
+    ("g**t ch*t", "giết chết"),
+    ("d*m đ*ng", "dâm đãng"),
+    ("b*** tối", "buổi tối"),
+    ("kh*ng b*", "khủng bố"),
+    ("l*m t*nh", "làm tình"),
+    ("l**m m*t", "liếm mút"),
+    ("d*c v*ng", "dục vọng"),
+    ("h*m m**n", "ham muốn"),
+    ("l*n đ*nh", "lên đỉnh"),
+    ("b*p ch*t", "bóp chết"),
+    ("th* d**c", "thở dốc"),
+    ("th* d*c", "thở dốc"),
+    ("v**t v*", "vuốt ve"),
+    ("l* m*ng", "lỗ mãng"),
+    ("k** r*n", "kêu rên"),
+    ("c** nh*", "cậu nhỏ"),
+    ("x** n*n", "xoa nắn"),
+    ("c*m v**", "cắm vào"),
+    ("n*n b*p", "nắn bóp"),
+    ("r*n r*", "rên rỉ"),
+    ("v*n v*", "vân vê"),
+    ("v* v*n", "ve vãn"),
+    ("b*n r*", "bắn ra"),
+    ("b* q**", "ba que"),
+    ("m* t**", "ma túy"),
+    ("ch*ch", "chịch"),
+    ("h**p", "hiếp"),
+    ("l**m", "liếm"),
+    ("g**t", "giết"),
+    ("ch*t", "chết"),
+    ("d*m", "dâm"),
+    ("b*n", "bắn"),
+    ("m*t", "mút"),
+]
+
+REMOVE_LINES = [
+    re.compile(r"^\\s*Nguồn:\\s*(?:\\[read\\.st\\]\\(https?://(?:www\\.)?read\\.st/?\\)|https?://(?:www\\.)?read\\.st/?|read\\.st)\\s*$", re.I),
+    re.compile(r"^\\s*-{2,}\\s*oOo\\s*-{2,}\\s*$", re.I),
+]
+
 WORD_FIXES = [
     ("th* d**c → thở dốc", re.compile(r"(?<!\w)th\*\s+d\*\*c(?!\w)", re.I), "thở dốc"),
     ("r*n r* → rên rỉ", re.compile(r"(?<!\w)r\*n\s+r\*(?!\w)", re.I), "rên rỉ"),
@@ -27,6 +77,10 @@ PATTERNS = [
 ]
 
 def fix_text(text, counts):
+    for source, target in MASKED_WORDS:
+        pattern = re.compile(r'(?<!\\w)' + re.escape(source).replace(r'\\ ', r'\\s+') + r'(?!\\w)', re.I)
+        text, changed = pattern.subn(lambda m: target.capitalize() if m.group(0)[:1].isupper() else target, text)
+        counts['Khôi phục từ bị che'] += changed
     for name, pattern, replacement in WORD_FIXES + PATTERNS:
         text, changed = pattern.subn(replacement, text)
         counts[name] += changed
@@ -82,7 +136,12 @@ def clean(data, options):
     if options.get("narrow"):
         for section in doc.sections:
             section.top_margin = section.bottom_margin = section.left_margin = section.right_margin = Cm(1.27)
-    for paragraph in iter_paragraphs(doc):
+    for paragraph in list(iter_paragraphs(doc)):
+        if any(pattern.fullmatch(paragraph.text.strip()) for pattern in REMOVE_LINES):
+            element = paragraph._element
+            element.getparent().remove(element)
+            counts['Xóa dòng nguồn / phân cách'] += 1
+            continue
         original = paragraph.text
         local = Counter()
         cleaned = fix_text(original, local)
