@@ -10,7 +10,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 950 * 1024 * 1024
 
 PATTERNS = [
     ("Khoảng trắng lặp", re.compile(r"(?<=\S)[ \t]{2,}"), " "),
