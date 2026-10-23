@@ -59,8 +59,8 @@ MASKED_WORDS = [
 ]
 
 REMOVE_LINES = [
-    re.compile(r"^\\s*Nguồn:\\s*(?:\\[read\\.st\\]\\(https?://(?:www\\.)?read\\.st/?\\)|https?://(?:www\\.)?read\\.st/?|read\\.st)\\s*$", re.I),
-    re.compile(r"^\\s*-{2,}\\s*oOo\\s*-{2,}\\s*$", re.I),
+    re.compile(r"^\s*Nguồn:\s*(?:\[read\.st\]\(https?://(?:www\.)?read\.st/?\)|https?://(?:www\.)?read\.st/?|read\.st)\s*$", re.I),
+    re.compile(r"^\s*-{2,}\s*oOo\s*-{2,}\s*$", re.I),
 ]
 
 WORD_FIXES = [
@@ -78,7 +78,7 @@ PATTERNS = [
 
 def fix_text(text, counts):
     for source, target in MASKED_WORDS:
-        pattern = re.compile(r'(?<!\\w)' + re.escape(source).replace(r'\\ ', r'\\s+') + r'(?!\\w)', re.I)
+        pattern = re.compile(r'(?<!\w)' + re.escape(source).replace(r'\ ', r'\s+') + r'(?!\w)', re.I)
         text, changed = pattern.subn(lambda m: target.capitalize() if m.group(0)[:1].isupper() else target, text)
         counts['Khôi phục từ bị che'] += changed
     for name, pattern, replacement in WORD_FIXES + PATTERNS:
