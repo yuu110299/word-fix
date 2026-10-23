@@ -16,7 +16,7 @@ PATTERNS = [
     ("Khoảng trắng lặp", re.compile(r"(?<=\S)[ \t]{2,}"), " "),
     ("Dấu cách trước dấu câu", re.compile(r"[ \t]+(?=[,:;!?])"), ""),
     ("Dấu cách trước dấu chấm", re.compile(r"[ \t]+(?=\.(?!\.))"), ""),
-    ("Thiếu khoảng trắng sau dấu phẩy", re.compile(r',(?=[^\\s\\d"”’.,])'), ", "),
+    ("Thiếu khoảng trắng sau dấu phẩy", re.compile(r',(?=[^\s\d"”’.,])'), ", "),
     ("Ký hiệu ^+^+ dính chữ", re.compile(r"(?<=[^\W\d_])(?=\^\+\^\+)"), " "),
 ]
 
