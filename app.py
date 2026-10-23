@@ -3,6 +3,7 @@ import json
 import os
 import re
 from collections import Counter
+from difflib import SequenceMatcher
 from flask import Flask, request, render_template, send_file, jsonify
 from docx import Document
 from docx.shared import Cm, Pt
@@ -12,7 +13,12 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 950 * 1024 * 1024
 
+WORD_FIXES = [
+    ("th* d**c → thở dốc", re.compile(r"(?<!\w)th\*\s+d\*\*c(?!\w)", re.I), "thở dốc"),
+    ("r*n r* → rên rỉ", re.compile(r"(?<!\w)r\*n\s+r\*(?!\w)", re.I), "rên rỉ"),
+]
 PATTERNS = [
+    ("Ký hiệu ^p lặp", re.compile(r"(?:\^p){2,}", re.I), "^p"),
     ("Khoảng trắng lặp", re.compile(r"(?<=\S)[ \t]{2,}"), " "),
     ("Dấu cách trước dấu câu", re.compile(r"[ \t]+(?=[,:;!?])"), ""),
     ("Dấu cách trước dấu chấm", re.compile(r"[ \t]+(?=\.(?!\.))"), ""),
@@ -21,10 +27,41 @@ PATTERNS = [
 ]
 
 def fix_text(text, counts):
-    for name, pattern, replacement in PATTERNS:
+    for name, pattern, replacement in WORD_FIXES + PATTERNS:
         text, changed = pattern.subn(replacement, text)
         counts[name] += changed
     return text
+
+def replace_runs(paragraph, old, new):
+    runs = paragraph.runs
+    if not runs:
+        paragraph.add_run(new)
+        return
+    if len(runs) == 1:
+        runs[0].text = new
+        return
+    chars = [(i, c) for i, run in enumerate(runs) for c in run.text]
+    if len(chars) != len(old):
+        return False
+    for op, a, b, c, d in reversed(SequenceMatcher(None, old, new, autojunk=False).get_opcodes()):
+        if op != "equal":
+            target = chars[a][0] if a < len(chars) else len(runs)-1
+            chars[a:b] = [(target, ch) for ch in new[c:d]]
+    pieces = [""] * len(runs)
+    for i, ch in chars:
+        pieces[i] += ch
+    for run, value in zip(runs, pieces):
+        run.text = value
+    return True
+
+def remove_blank_paragraphs(doc):
+    removed = 0
+    for paragraph in list(doc.paragraphs):
+        if not paragraph.text.strip() and not paragraph._p.xpath(".//w:drawing | .//w:br | .//w:object | .//w:pict"):
+            el = paragraph._element
+            el.getparent().remove(el)
+            removed += 1
+    return removed
 
 def is_heading(text):
     title = text.strip()
@@ -50,15 +87,10 @@ def clean(data, options):
         local = Counter()
         cleaned = fix_text(original, local)
         if cleaned != original:
-            if len(paragraph.runs) == 1:
-                paragraph.runs[0].text = cleaned
-                counts.update(local)
-            elif not paragraph.runs:
-                paragraph.add_run(cleaned)
+            if replace_runs(paragraph, original, cleaned) is not False:
                 counts.update(local)
             else:
-                # Preserve text formatting when a paragraph contains multiple styled runs.
-                counts["Đoạn nhiều định dạng cần kiểm tra"] += 1
+                counts["Đoạn cần kiểm tra"] += 1
         if options.get("headings") and is_heading(paragraph.text):
             paragraph.style = "Heading 2"
             paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
@@ -66,6 +98,7 @@ def clean(data, options):
                 run.font.name = "Tahoma"
                 run.font.size = Pt(11)
             counts["Chuẩn hóa Heading 2"] += 1
+    counts["Đoạn trống đã xóa"] = remove_blank_paragraphs(doc)
     output = io.BytesIO()
     doc.save(output)
     output.seek(0)
