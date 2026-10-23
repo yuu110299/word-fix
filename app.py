@@ -13,11 +13,11 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 
 PATTERNS = [
-    ("Khoảng trắng lặp", re.compile(r"(?<=\\S)[ \\t]{2,}"), " "),
-    ("Dấu cách trước dấu câu", re.compile(r"[ \\t]+(?=[,:;!?])"), ""),
-    ("Dấu cách trước dấu chấm", re.compile(r"[ \\t]+(?=\\.(?!\\.))"), ""),
-    ("Thiếu khoảng trắng sau dấu phẩy", re.compile(r",(?=[^\\s\\d\\\"”’.,])"), ", "),
-    ("Ký hiệu ^+^+ dính chữ", re.compile(r"(?<=[^\\W\\d_])(?=\\^\\+\\^\\+)"), " "),
+    ("Khoảng trắng lặp", re.compile(r"(?<=\S)[ \t]{2,}"), " "),
+    ("Dấu cách trước dấu câu", re.compile(r"[ \t]+(?=[,:;!?])"), ""),
+    ("Dấu cách trước dấu chấm", re.compile(r"[ \t]+(?=\.(?!\.))"), ""),
+    ("Thiếu khoảng trắng sau dấu phẩy", re.compile(r',(?=[^\\s\\d"”’.,])'), ", "),
+    ("Ký hiệu ^+^+ dính chữ", re.compile(r"(?<=[^\W\d_])(?=\^\+\^\+)"), " "),
 ]
 
 def fix_text(text, counts):
@@ -28,7 +28,7 @@ def fix_text(text, counts):
 
 def is_heading(text):
     title = text.strip()
-    return bool(re.match(r"^(?:Chương|Chapter)\\s+\\d+(?:\\s*[:：.\\-–].*)?$", title, re.I)) or title.casefold() in ("văn án", "giới thiệu", "mục lục")
+    return bool(re.match(r"^(?:Chương|Chapter)\s+\d+(?:\s*[:：.\-–].*)?$", title, re.I)) or title.casefold() in ("văn án", "giới thiệu", "mục lục")
 
 def iter_paragraphs(doc):
     for paragraph in doc.paragraphs:
