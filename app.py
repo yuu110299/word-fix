@@ -14,6 +14,7 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
 
 MASKED_WORDS = [
+    ("b*nh h**n", "bệnh hoạn"),
     ("k** kh** q**n", "kéo khóa quần"),
     ("c*n m** d***", "cắn môi dưới"),
     ("k*ch th*ch", "kích thích"),
