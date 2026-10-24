@@ -79,10 +79,11 @@ PATTERNS = [
 COMPILED_MASKED_WORDS = [(re.compile(r'(?<!\w)' + re.escape(src) + r'(?!\w)', re.I), dst) for src, dst in MASKED_WORDS]
 
 def fix_text(text, counts):
-    for pattern, target in COMPILED_MASKED_WORDS:
-        text, changed = pattern.subn(lambda m: target.capitalize() if m.group(0)[:1].isupper() else target, text)
-        counts['Khôi phục từ bị che'] += changed
-    for name, pattern, replacement in WORD_FIXES + PATTERNS:
+    if '*' in text:
+        for pattern, target in COMPILED_MASKED_WORDS:
+            text, changed = pattern.subn(lambda m: target.capitalize() if m.group(0)[:1].isupper() else target, text)
+            counts['Khôi phục từ bị che'] += changed
+    for name, pattern, replacement in PATTERNS:
         text, changed = pattern.subn(replacement, text)
         counts[name] += changed
     return text
@@ -137,13 +138,13 @@ def clean(data, options):
     if options.get("narrow"):
         for section in doc.sections:
             section.top_margin = section.bottom_margin = section.left_margin = section.right_margin = Cm(1.27)
-    for paragraph in list(iter_paragraphs(doc)):
-        if any(pattern.fullmatch(paragraph.text.strip()) for pattern in REMOVE_LINES):
+    for paragraph in iter_paragraphs(doc):
+        original = paragraph.text
+        if ('read.st' in original.lower() or 'ooo' in original.lower()) and any(pattern.fullmatch(original.strip()) for pattern in REMOVE_LINES):
             element = paragraph._element
             element.getparent().remove(element)
             counts['Xóa dòng nguồn / phân cách'] += 1
             continue
-        original = paragraph.text
         local = Counter()
         cleaned = fix_text(original, local)
         if cleaned != original:
