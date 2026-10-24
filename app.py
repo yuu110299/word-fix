@@ -14,6 +14,9 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024
 
 MASKED_WORDS = [
+    ("x*m ph*m l*nh th*", "xâm phạm lãnh thổ"),
+    ("ch** n**c", "chảy nước"),
+    ("l*t s*ch", "lột sạch"),
     ("Tr**ng X*", "trường xa"),
     ("b*nh h**n", "bệnh hoạn"),
     ("k** kh** q**n", "kéo khóa quần"),
@@ -134,6 +137,8 @@ def iter_paragraphs(doc):
                 for paragraph in cell.paragraphs:
                     yield paragraph
 
+FOOTNOTE_PATTERN = re.compile(r"^\s*\(\*[^\n]*\)\s*$")
+
 def clean(data, options):
     doc = Document(io.BytesIO(data))
     counts = Counter()
@@ -154,6 +159,10 @@ def clean(data, options):
                 counts.update(local)
             else:
                 counts["Đoạn cần kiểm tra"] += 1
+        if FOOTNOTE_PATTERN.fullmatch(paragraph.text):
+            for run in paragraph.runs:
+                run.italic = True
+            counts["Chú thích in nghiêng"] += 1
         if options.get("headings") and is_heading(paragraph.text):
             paragraph.style = "Heading 2"
             paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
