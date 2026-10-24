@@ -76,9 +76,10 @@ PATTERNS = [
     ("Ký hiệu ^+^+ dính chữ", re.compile(r"(?<=[^\W\d_])(?=\^\+\^\+)"), " "),
 ]
 
+COMPILED_MASKED_WORDS = [(re.compile(r'(?<!\w)' + re.escape(src) + r'(?!\w)', re.I), dst) for src, dst in MASKED_WORDS]
+
 def fix_text(text, counts):
-    for source, target in MASKED_WORDS:
-        pattern = re.compile(r'(?<!\w)' + re.escape(source) + r'(?!\w)', re.I)
+    for pattern, target in COMPILED_MASKED_WORDS:
         text, changed = pattern.subn(lambda m: target.capitalize() if m.group(0)[:1].isupper() else target, text)
         counts['Khôi phục từ bị che'] += changed
     for name, pattern, replacement in WORD_FIXES + PATTERNS:
