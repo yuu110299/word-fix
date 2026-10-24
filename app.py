@@ -73,6 +73,7 @@ WORD_FIXES = [
     ("r*n r* → rên rỉ", re.compile(r"(?<!\w)r\*n\s+r\*(?!\w)", re.I), "rên rỉ"),
 ]
 PATTERNS = [
+    ("Bỏ khoảng trắng sau : ...", re.compile(r"(:[ \t]*\.{3})[ \t]+"), r"\1"),
     ("Ký hiệu ^p lặp", re.compile(r"(?:\^p){2,}", re.I), "^p"),
     ("Khoảng trắng lặp", re.compile(r"(?<=\S)[ \t]{2,}"), " "),
     ("Dấu cách trước dấu câu", re.compile(r"[ \t]+(?=[,:;!?])"), ""),
