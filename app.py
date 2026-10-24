@@ -78,7 +78,7 @@ PATTERNS = [
 
 def fix_text(text, counts):
     for source, target in MASKED_WORDS:
-        pattern = re.compile(r'(?<!\w)' + re.escape(source).replace(r'\ ', r'\s+') + r'(?!\w)', re.I)
+        pattern = re.compile(r'(?<!\w)' + re.escape(source) + r'(?!\w)', re.I)
         text, changed = pattern.subn(lambda m: target.capitalize() if m.group(0)[:1].isupper() else target, text)
         counts['Khôi phục từ bị che'] += changed
     for name, pattern, replacement in WORD_FIXES + PATTERNS:
@@ -179,7 +179,8 @@ def api_clean():
     try:
         output, counts = clean(upload.read(), options)
     except Exception:
-        return jsonify(error="Không đọc được file Word hợp lệ."), 400
+        app.logger.exception('Document processing error')
+        return jsonify(error='Không xử lý được tài liệu. Vui lòng thử một file DOCX nhỏ hơn.'), 422
     original_filename = os.path.splitext(secure_filename(upload.filename))[0] or "document"
     response = send_file(
         output,
